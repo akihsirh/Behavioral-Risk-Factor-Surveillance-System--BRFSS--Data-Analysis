@@ -1,0 +1,224 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+### Data Background
+According to the reference material provided "The Behavioral Risk Factor Surveillance System (BRFSS) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC)." The population of the survey consists of US residents aged 18 and above and the system is designed to measure behavioral risk factors for the sampled population.
+
+The objective is "to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases"" that affect the population. 
+
+### Generalizability
+As per the reference information provided - Since 2011, BRFSS conducts both landline telephone- and cellular telephone-based surveys. In conducting the BRFSS landline telephone survey, interviewers collect data from a randomly selected adult in a household. In conducting the cellular telephone version of the BRFSS questionnaire, interviewers collect data from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+
+As per the The BRFSS Data User Guide two samples are used by the BRFSS:
+
+1. One for landline telephone respondents
+2. One for cellular telephone respondents
+
+Accordingly two different sampling techniques are used for the above samples as follows:
+
+1. Disproportionate stratified sampling (DSS) (which is more efficient that simple random sampling) has been used for the landline sample.
+2. The cellular telephone sample is randomly generated from a sampling frame of confirmed cellular area code and prefix combinations and the respondents are randomly selected with each having equal probability of selection. 
+
+Source:<em>https://www.cdc.gov/brfss/data_documentation/pdf/UserguideJune2013.pdf</em>
+
+**In conclusion as some form of random sampling was employed in the selection of respondents for both samples (landline and cellular) the sample is generalizable to the population of interest.**
+
+
+### Causability
+As per the reference information provided - BRFSS is an ongoing surveillance system designed to measure behavioral risk factors for the non-institutionalized adult population (18 years of age and older) residing in the US. The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews. Over time, the number of states participating in the survey increased; by 2001, 50 states, the District of Columbia, Puerto Rico, Guam, and the US Virgin Islands were participating in the BRFSS. Today, all 50 states, the District of Columbia, Puerto Rico, and Guam collect data annually and American Samoa, Federated States of Micronesia, and Palau collect survey data over a limited point- in-time (usually one to three months).
+
+**In conclusion as the BRFSS is defined as an ongoing surveillance system, the study is an observational study. This rules out inferences of a causal nature made on the basis of the data.**
+
+* * *
+
+## Part 2: Research questions
+
+###Research question 1:
+Is there a trend or correlation between reported general health and taking out leisure time for physical activity in the past 30 days? Also does the correlation vary across income levels ?
+
+***Variables***
+
+1. _rfhlth : Adults With Good Or Better Health
+2. _incomg: Computed Income Categories
+3. _totinda: Leisure Time Physical Activity Calculated Variable
+
+***Reason of interest***:
+As a young working professional who wants to have better work life balance, I was interested in knowing whether those who report better health tend to take out time for physical activity and exercise.I also wanted to understand how this perception or habit plays out across various income levels.
+
+###Research question 2:
+Is there a trend or correlation between the reported general health and the number of hours invested in sleep ? Additionally, are there any differences across income levels ?
+
+***Variables***
+
+1. _rfhlth : Adults With Good Or Better Health
+2. sleptim1: How Much Time Do You Sleep
+3. _educag: Computed Level Of Education Completed Categories
+
+***Reason of interest***:
+As before my efforts to improve the quality of my lifestyle extends to getting a good amount of sleep and I wanted to see the correlation between general health and time invested for sleep. I also wanted to know if the level of education received has anything to do with the amount of time you invest in sleep. Would people with higher education be involved in more demanding jobs and hence get less sleep or is it the other way around ? Therefore I am interested to know if there is a correlation between the above variables.
+
+###Research question 3:
+Is there a trend or correlation between satisfaction of life reported by a respondent and whether or not the respondent is married and with kids in the household? 
+
+***Variables***
+
+1. lsatisfy: Satisfaction With Life
+2. rcsrltn2: Relationship To Child
+3. marital: Marital Status
+
+***Reason of interest***:
+As a person I am interested in understanding if there is any merit to the societal pressure imposed on unmarried individuals to marry and have kids. It would be interesting to see if there is any trend to support this age old pressure.
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button (green button with orange arrow) above. Make sure that your code is visible
+in the project you submit. Delete this note when before you submit your work.
+
+###Research question 1:
+
+Since these are computed variables in the dataset starting with an "_" character, it is important to find out how they are referred in the dataset.
+
+```{r rq1 - finding interested variable names from dataset}
+grep("_rfhlth", names(brfss2013), value = TRUE)
+grep("_incomg", names(brfss2013), value = TRUE)
+grep("_totinda", names(brfss2013), value = TRUE)
+```
+
+Next we need to understand the structure of the variables of interest.
+```{r rq1 - finding nature of interested variables}
+str(brfss2013$X_rfhlth)
+```
+A similar exercise was done for the other two variables.
+
+Next we create a subset out of the main dataset containing the variables of interest. We first exclude the NA values for all three variables (General health, Computed income levels and 
+calculated variable for leisure time physical activity). We also create a calculated variable that helps us identify cases where someone has both great health and has been physically active in the past 30 days. This will help us represent our population of interest across income levels more easily.
+
+```{r research q1- creating a subset of the data of interest from the main data}
+rq1 <- brfss2013 %>% select(X_rfhlth,X_incomg,X_totinda) %>% filter(!is.na(X_rfhlth),!is.na(X_incomg),!is.na(X_totinda)) %>% mutate(better_health_and_exercise = ifelse((X_rfhlth == "Good or Better Health") & (X_totinda == "Had physical activity or exercise"),"Yes","No"))
+```
+
+First we plot the relationship between general health and leisure time for physical activity with the former on the x axis and the latter on the y axis.
+```{r research q1- first subplot}
+ggplot(rq1,aes(x=X_rfhlth, fill=X_totinda)) + geom_bar()
+```
+
+The above plot shows that there is a positive correlation between thinking that you have great/good health and taking out time for exercise/physical activity.
+
+The below statistics also support the correlation shown above.
+```{r research q1- first stat}
+rq1 %>% group_by(X_rfhlth,X_totinda) %>% summarise(count=n())
+```
+
+Next we plot the relationship between the calculated variable - better_health_and_exercise - and income levels with the former on the x axis and the latter on the y axis.
+```{r research q1- second subplot}
+ggplot(rq1,aes(x=better_health_and_exercise, fill=X_incomg)) + geom_bar()
+```
+
+The above plot shows that there is a positive correlation between income levels and taking more time out for physical activity and having better health in general.
+
+ The statistics below also support the above plot.
+```{r research q1- second stat}
+rq1 %>% group_by(better_health_and_exercise,X_incomg) %>% summarise(count=n())
+```
+
+###Research question 2:
+As in the first question we find out the names of the variables of interest in the dataset and we understand their structure. The variables are:
+
+1. X_rfhlth : Adults With Good Or Better Health
+2. sleptim1: How Much Time Do You Sleep
+3. _incomg: Computed Income Categories
+
+Next we create a subset out of the three variables and exclude the NA values. We also create a calculated variable called enough sleep. Assuming that 7 and more hours of sleep is sufficient to qualify as a good amount of sleep the variable will hold "Yes" and "No" values accordingly.
+
+```{r rq2- creating a subset of the data of interest from the main data}
+rq2 <- brfss2013 %>% select(X_rfhlth,sleptim1,X_educag) %>% filter(!is.na(X_rfhlth),!is.na(sleptim1),!is.na(X_educag)) %>% mutate(enough_sleep=ifelse(sleptim1>=7,"Yes","No"))
+```
+
+First we plot the relationship between our calculated variable - enough_sleep -  and reported general health.
+
+```{r research q2-plot1}
+ggplot(rq2,aes(x=X_rfhlth, fill=enough_sleep)) + geom_bar()
+```
+
+The above plot shows that there is a positive correlation between reported great/good health and time invested for sleep.
+The statistics below back the plot above.
+
+```{r research q2- first stat}
+rq2 %>% group_by(X_rfhlth,enough_sleep) %>% summarise(count=n())
+```
+
+Next we plot the relationship between education levels and enough_sleep.
+
+```{r research q2-plot2}
+ggplot(rq2,aes(x=X_educag, fill=enough_sleep)) + geom_bar() + theme(axis.text.x =element_text(size  = 9,angle = 45,hjust = 1,vjust = 1))
+```
+
+The above plot shows that a greater amount of people across all education levels invest a sufficient amount of time towards their sleep and there is an positive correlation between education levels and time invested towards sleep.
+
+The below stats also show the same. If you take the ratio of (education and enough sleep = Yes) and (education level and sleep = No) you will see that it increases as the education levels increase.
+
+```{r research q2-stat2}
+rq2 %>% count(enough_sleep,X_educag)
+```
+
+
+###Research question 3:
+
+The variables of interest are:
+1. lsatisfy: Satisfaction With Life
+2. rcsrltn2: Relationship To Child
+3. marital: Marital Status
+
+Next we create a subset out of the three variables and exclude the NA values. We also create a calculated variable called parent_and_married to mark our population of interest.
+
+```{r rq3- creating a subset of the data of interest from the main data}
+rq3 <- brfss2013 %>% select(lsatisfy,rcsrltn2,marital) %>% filter(!is.na(marital),!is.na(rcsrltn2),!is.na(lsatisfy)) %>% mutate(parent_and_married=ifelse((marital == "Married") & (rcsrltn2 == "Parent"),"Yes","No"),satisfaction = ifelse(lsatisfy == "Very satisfied" | lsatisfy == "Satisfied","Yes","No"))
+```
+
+Now we plot the relationship between general satisfaction with life and those who are a parent and married
+```{r research q3-plot}
+ggplot(rq3,aes(x=satisfaction, fill=parent_and_married)) + geom_bar()
+```
+
+The above plot shows that there is a correlation to general satisfaction with life and being married and having kids.
+
+The below stats support the plot above.
+```{r research q3- first stat}
+rq3 %>% group_by(satisfaction,parent_and_married) %>% summarise(count=n())
+```
+
